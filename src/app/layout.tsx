@@ -7,7 +7,11 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")) as string;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Sol Nascente - Alimentos de Qualidade",
   description: "Descubra nossa linha completa de alimentos com qualidade premium. Valorizamos a culinária simples, democrática e autêntica da nossa cultura.",
   keywords: "alimentos, qualidade, culinária, sustentabilidade, produtos alimentícios",
