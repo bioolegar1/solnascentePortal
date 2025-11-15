@@ -45,11 +45,33 @@ interface PageProps {
 export default function CandidaturaPage({ params }: PageProps) {
   const router = useRouter();
   const [id, setId] = useState<string | null>(null);
-  const job = id ? mockJobs[id] : null;
+  const [job, setJob] = useState<Job | null>(null);
 
   useEffect(() => {
     params.then(p => setId(p.id));
   }, [params]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/jobs?id=${id}`);
+        const json = await res.json();
+        if (mounted && json.data) {
+          setJob(json.data);
+        } else if (mounted && mockJobs[id]) {
+          setJob(mockJobs[id]);
+        }
+      } catch {
+        if (mounted && id && mockJobs[id]) setJob(mockJobs[id]);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
 
   const [formData, setFormData] = useState({
     name: '',

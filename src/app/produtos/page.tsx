@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Package } from 'lucide-react';
@@ -75,10 +75,29 @@ const mockProducts: Product[] = [
 const categories = ['Todos', 'Molhos', 'Conservas', 'Temperos', 'Azeites', 'Vinagres'];
 
 export default function ProdutosPage() {
-  const [products] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  // const [isLoading, setIsLoading] = useState(false); // Not needed for now
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/products');
+        const json = await res.json();
+        if (mounted && Array.isArray(json.data) && json.data.length > 0) {
+          setProducts(json.data);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Use useMemo to filter products efficiently
   const filteredProducts = useMemo(() => {
@@ -177,12 +196,25 @@ export default function ProdutosPage() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600">
-            {`${filteredProducts.length} produto(s) encontrado(s)`}
+            {isLoading ? 'Carregando...' : `${filteredProducts.length} produto(s) encontrado(s)`}
           </p>
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="h-64 bg-gray-200"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-32"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-16">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-600 mb-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, MapPin, Clock, DollarSign, Users, Briefcase, ArrowRight, Award } from 'lucide-react';
 
@@ -72,11 +72,33 @@ export default function CarreirasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('Todos');
   const [selectedType, setSelectedType] = useState('Todos');
+  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const departments = ['Todos', ...Array.from(new Set(mockJobs.map(job => job.department)))];
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/jobs');
+        const json = await res.json();
+        if (mounted && Array.isArray(json.data) && json.data.length > 0) {
+          setJobs(json.data);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const departments = ['Todos', ...Array.from(new Set(jobs.map(job => job.department)))];
   const jobTypes = ['Todos', 'CLT', 'PJ', 'Estágio'];
 
-  const filteredJobs = mockJobs.filter(job => {
+  const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.department.toLowerCase().includes(searchTerm.toLowerCase());
@@ -191,7 +213,12 @@ export default function CarreirasPage() {
 
           {/* Job Cards */}
           <div className="space-y-6">
-            {filteredJobs.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">Carregando vagas...</h3>
+              </div>
+            ) : filteredJobs.length === 0 ? (
               <div className="text-center py-12">
                 <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">
