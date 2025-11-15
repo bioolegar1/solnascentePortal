@@ -81,7 +81,6 @@ export default function HistoriaPage() {
               <Link href="/produtos" className="text-gray-700 hover:text-green-600 font-medium">Produtos</Link>
               <Link href="/historia" className="text-green-600 font-medium">Nossa História</Link>
               <Link href="/sustentabilidade" className="text-gray-700 hover:text-green-600 font-medium">Sustentabilidade</Link>
-              <Link href="/carreiras" className="text-gray-700 hover:text-green-600 font-medium">Carreiras</Link>
             </div>
           </div>
         </div>

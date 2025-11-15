@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Package, 
-  DollarSign, 
   Eye, 
   Edit, 
   Trash2, 
@@ -13,70 +12,143 @@ import {
   Filter,
   BarChart3,
   Settings,
-  LogOut
+  LogOut,
+  User,
+  Shield
 } from 'lucide-react';
+// import { getSupabaseClient } from '@/lib/supabaseClient'; // Unused import
+import { useAuth } from '@/hooks/useAuth';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 interface Product {
   id: string;
   name: string;
   description: string;
   category: string;
-  price: number;
   available: boolean;
+  images?: string[];
   createdAt: string;
 }
 
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Molho de Tomate Artesanal',
-    description: 'Feito com tomates frescos, sem conservantes',
-    category: 'Molhos',
-    price: 24.90,
-    available: true,
-    createdAt: '2024-01-15'
-  },
-  {
-    id: '2',
-    name: 'Conserva de Pimenta',
-    description: 'Pimentas selecionadas com especiarias',
-    category: 'Conservas',
-    price: 32.90,
-    available: true,
-    createdAt: '2024-01-10'
-  },
-  {
-    id: '3',
-    name: 'Tempero Completo',
-    description: 'Mistura especial de ervas e especiarias',
-    category: 'Temperos',
-    price: 18.90,
-    available: false,
-    createdAt: '2024-01-08'
-  }
-];
+const mockProducts: Product[] = [];
 
-export default function AdminDashboardPage() {
+function AdminDashboardContent() {
   const router = useRouter();
-  const [products] = useState<Product[]>(mockProducts);
+  const { user, isAdmin, signOut } = useAuth();
+  // const client = getSupabaseClient(); // Unused variable
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  // const [isLoading] = useState(false); // Commented out for now
+  const [showAdd, setShowAdd] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: '', description: '', category: 'Molhos', available: true, images: [''] });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [notice, setNotice] = useState<string>('');
+  const [errorNotice, setErrorNotice] = useState<string>('');
+  const [savingAdd, setSavingAdd] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
-  // Check authentication
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('admin_token');
-      if (!token) {
-        router.push('/admin/login');
-      }
-    }
-  }, [router]);
+    const load = async () => {
+      const res = await fetch('/api/products');
+      const json = await res.json();
+      const list = (json.data || []).map((p: { id: string; name: string; description: string; category: string; available: boolean; images?: string[] }) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        images: p.images,
+        available: p.available,
+        createdAt: new Date().toISOString().slice(0, 10)
+      }));
+      setProducts(list);
+    };
+    load();
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_email');
+  const handleLogout = async () => {
+    await signOut();
     router.push('/admin/login');
+  };
+
+  const handleAddProduct = async () => {
+    setErrorNotice('');
+    setSavingAdd(true);
+    const res = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProduct)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const p = json.data;
+      setProducts(prev => [
+        ...prev,
+        {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+          images: p.images,
+          available: p.available,
+          createdAt: new Date().toISOString().slice(0, 10)
+        }
+      ]);
+      setShowAdd(false);
+      setNewProduct({ name: '', description: '', category: 'Molhos', available: true, images: [''] });
+      setNotice('Produto cadastrado com sucesso');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setErrorNotice(err?.error || 'Falha ao salvar produto');
+    }
+    setSavingAdd(false);
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    const form = new FormData();
+    files.forEach(f => form.append('files', f));
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    const json = await res.json();
+    return Array.isArray(json.urls) ? json.urls : [];
+  };
+
+  const handleEditSave = async () => {
+    if (!editProduct) return;
+    setErrorNotice('');
+    setSavingEdit(true);
+    const res = await fetch(`/api/products?id=${editProduct.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editProduct.name,
+        description: editProduct.description,
+        category: editProduct.category,
+        available: editProduct.available,
+        images: editProduct.images
+      })
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const p = json.data;
+      setProducts(prev => prev.map(item => item.id === p.id ? {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        images: p.images,
+        available: p.available,
+        createdAt: item.createdAt
+      } : item));
+      setShowEdit(false);
+      setEditProduct(null);
+      setNotice('Produto atualizado com sucesso');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setErrorNotice(err?.error || 'Falha ao atualizar produto');
+    }
+    setSavingEdit(false);
   };
 
   const filteredProducts = products.filter(product => {
@@ -103,13 +175,7 @@ export default function AdminDashboardPage() {
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
-    {
-      title: 'Preço Médio',
-      value: `R$ ${(products.reduce((acc, p) => acc + p.price, 0) / products.length).toFixed(2)}`,
-      icon: DollarSign,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
-    },
+    // Removed price stats for catalog-only mode
     {
       title: 'Categorias',
       value: new Set(products.map(p => p.category)).size,
@@ -133,6 +199,18 @@ export default function AdminDashboardPage() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* User Info */}
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <User className="w-4 h-4" />
+                <span>{user?.email}</span>
+                {isAdmin && (
+                  <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                    <Shield className="w-3 h-3" />
+                    Admin
+                  </span>
+                )}
+              </div>
+              
               <button className="p-2 text-gray-400 hover:text-gray-600">
                 <Settings className="w-5 h-5" />
               </button>
@@ -201,12 +279,67 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Add Product Button */}
-            <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+            <button onClick={() => setShowAdd(true)} className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
               <Plus className="w-4 h-4" />
               <span>Adicionar Produto</span>
             </button>
           </div>
+          {notice && (
+            <div className="mt-4 text-sm text-green-700 bg-green-100 px-3 py-2 rounded">{notice}</div>
+          )}
         </div>
+        {showAdd && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+            <div className="bg-white text-gray-900 rounded-lg shadow-xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Novo Produto</h3>
+              <div className="space-y-4">
+                <input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Nome" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+                <textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} placeholder="Descrição" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+                <input value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })} placeholder="Categoria" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+                {/* Removed price field for catalog-only */}
+                <div className="space-y-2">
+                  {newProduct.images.map((img, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <input value={img} onChange={(e) => {
+                        const arr = [...newProduct.images];
+                        arr[idx] = e.target.value;
+                        setNewProduct({ ...newProduct, images: arr });
+                      }} placeholder={`URL da imagem ${idx + 1}`} className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+                      <button onClick={() => {
+                        const arr = newProduct.images.filter((_, i) => i !== idx);
+                        setNewProduct({ ...newProduct, images: arr.length ? arr : [''] });
+                      }} className="px-3 py-2 border rounded">Remover</button>
+                    </div>
+                  ))}
+                  {newProduct.images.length < 5 && (
+                    <>
+                      <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 border rounded">Adicionar Imagem</button>
+                      <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={async (e) => {
+                        const inputEl = e.currentTarget as HTMLInputElement;
+                        const files = Array.from(inputEl.files || []);
+                        if (!files.length) return;
+                        const urls = await uploadFiles(files.slice(0, 5 - newProduct.images.length));
+                        setNewProduct({ ...newProduct, images: [...newProduct.images.filter(Boolean), ...urls].slice(0,5) });
+                        inputEl.value = '';
+                      }} />
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input type="checkbox" checked={newProduct.available} onChange={(e) => setNewProduct({ ...newProduct, available: e.target.checked })} />
+                  <span>Disponível</span>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button onClick={() => setShowAdd(false)} className="px-4 py-2 border rounded">Cancelar</button>
+                  <button onClick={handleAddProduct} disabled={savingAdd} className={`px-4 py-2 rounded ${savingAdd ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white'}`}>{savingAdd ? 'Salvando...' : 'Salvar'}</button>
+                </div>
+                {errorNotice && (
+                  <div className="text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{errorNotice}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Products Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -220,9 +353,7 @@ export default function AdminDashboardPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Categoria
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Preço
-                  </th>
+                  {/* Removed price column */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
@@ -254,9 +385,7 @@ export default function AdminDashboardPage() {
                         {product.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      R$ {product.price.toFixed(2)}
-                    </td>
+                    {/* Removed price cell */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         product.available 
@@ -268,13 +397,30 @@ export default function AdminDashboardPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button
+                          onClick={() => router.push(`/produtos/${product.id}`)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="text-green-600 hover:text-green-900">
+                        <button
+                          onClick={() => {
+                            setShowEdit(true);
+                            setEditProduct(product);
+                          }}
+                          className="text-green-600 hover:text-green-900"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button
+                          onClick={async () => {
+                            const res = await fetch(`/api/products?id=${product.id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                              setProducts(prev => prev.filter(p => p.id !== product.id));
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-900"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -299,6 +445,66 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </div>
+
+      {showEdit && editProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+          <div className="bg-white text-gray-900 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Produto</h3>
+            <div className="space-y-4">
+              <input value={editProduct.name} onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })} placeholder="Nome" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+              <textarea value={editProduct.description} onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })} placeholder="Descrição" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+              <input value={editProduct.category} onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })} placeholder="Categoria" className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+              <div className="space-y-2">
+                {(editProduct.images || ['']).map((img, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input value={img} onChange={(e) => {
+                      const arr = [...(editProduct.images || [])];
+                      arr[idx] = e.target.value;
+                      setEditProduct({ ...editProduct, images: arr });
+                    }} placeholder={`URL da imagem ${idx + 1}`} className="w-full px-3 py-2 border border-gray-300 rounded placeholder-gray-900" />
+                    <button onClick={() => {
+                      const arr = (editProduct.images || []).filter((_, i) => i !== idx);
+                      setEditProduct({ ...editProduct, images: arr.length ? arr : [''] });
+                    }} className="px-3 py-2 border rounded">Remover</button>
+                  </div>
+                ))}
+                {(editProduct.images || []).length < 5 && (
+                  <>
+                    <button onClick={() => editFileInputRef.current?.click()} className="px-3 py-2 border rounded">Adicionar Imagem</button>
+                    <input ref={editFileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={async (e) => {
+                      const inputEl = e.currentTarget as HTMLInputElement;
+                      const files = Array.from(inputEl.files || []);
+                      if (!files.length || !editProduct) return;
+                      const urls = await uploadFiles(files.slice(0, 5 - (editProduct.images?.length || 0)));
+                      setEditProduct({ ...editProduct, images: [ ...(editProduct.images || []).filter(Boolean), ...urls ].slice(0,5) });
+                      inputEl.value = '';
+                    }} />
+                  </>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <input type="checkbox" checked={editProduct.available} onChange={(e) => setEditProduct({ ...editProduct, available: e.target.checked })} />
+                <span>Disponível</span>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button onClick={() => { setShowEdit(false); setEditProduct(null); }} className="px-4 py-2 border rounded">Cancelar</button>
+                <button onClick={handleEditSave} disabled={savingEdit} className={`px-4 py-2 rounded ${savingEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white'}`}>{savingEdit ? 'Salvando...' : 'Salvar'}</button>
+              </div>
+              {errorNotice && (
+                <div className="text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{errorNotice}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <AdminDashboardContent />
+    </ProtectedRoute>
   );
 }

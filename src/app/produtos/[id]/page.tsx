@@ -8,9 +8,9 @@ interface Product {
   name: string;
   description: string;
   fullDescription: string;
-  image: string;
+  image?: string;
+  images?: string[];
   category: string;
-  price: number;
   available: boolean;
   ingredients: string[];
   nutritionalInfo: {
@@ -27,9 +27,9 @@ const mockProducts: Record<string, Product> = {
     name: 'Molho de Tomate Artesanal',
     description: 'Feito com tomates frescos, sem conservantes. Perfeito para massas e carnes.',
     fullDescription: 'Nosso molho de tomate artesanal é preparado com tomates frescos, colhidos no ponto certo de maturação. Sem conservantes artificiais, mantém o sabor autêntico e natural do tomate. Perfeito para acompanhar massas, carnes e preparações diversas.',
-    image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=artisanal%20tomato%20sauce%20glass%20jar%2C%20fresh%20tomatoes%2C%20basil%20leaves%2C%20wooden%20background%2C%20professional%20food%20photography%2C%20high%20resolution&image_size=square_hd',
+    images: ['https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=artisanal%20tomato%20sauce%20glass%20jar%2C%20fresh%20tomatoes%2C%20basil%20leaves%2C%20wooden%20background%2C%20professional%20food%20photography%2C%20high%20resolution&image_size=square_hd'],
     category: 'Molhos',
-    price: 24.90,
+    // sem preço
     available: true,
     ingredients: ['Tomate fresco', 'Alho', 'Cebola', 'Azeite de oliva', 'Sal', 'Manjericão', 'Orégano'],
     nutritionalInfo: {
@@ -44,9 +44,9 @@ const mockProducts: Record<string, Product> = {
     name: 'Conserva de Pimenta',
     description: 'Pimentas selecionadas com especiarias. Ideal para acompanhar carnes.',
     fullDescription: 'Conserva artesanal de pimenta, preparada com pimentas selecionadas e uma combinação especial de especiarias. Adicione um toque picante e saboroso aos seus pratos favoritos.',
-    image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=chili%20pepper%20preserves%20glass%20jar%2C%20colorful%20peppers%2C%20rustic%20kitchen%20background%2C%20professional%20food%20photography%2C%20high%20resolution&image_size=square_hd',
+    images: ['https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=chili%20pepper%20preserves%20glass%20jar%2C%20colorful%20peppers%2C%20rustic%20kitchen%20background%2C%20professional%20food%20photography%2C%20high%20resolution&image_size=square_hd'],
     category: 'Conservas',
-    price: 32.90,
+    // sem preço
     available: true,
     ingredients: ['Pimentas variadas', 'Vinagre de vinho', 'Sal', 'Açúcar', 'Especiarias'],
     nutritionalInfo: {
@@ -96,7 +96,7 @@ export default async function ProdutoDetalhesPage({ params }: PageProps) {
           <div className="space-y-6">
             <div className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl">
               <Image
-                src={product.image}
+                src={product.images?.[0] || product.image || ''}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -131,9 +131,7 @@ export default async function ProdutoDetalhesPage({ params }: PageProps) {
                 {product.description}
               </p>
               <div className="flex items-center space-x-4 mb-6">
-                <span className="text-3xl font-bold text-green-600">
-                  R$ {product.price.toFixed(2)}
-                </span>
+                {/* Catálogo sem preço */}
                 <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                   {product.category}
                 </span>

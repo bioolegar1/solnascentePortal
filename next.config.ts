@@ -8,6 +8,16 @@ const nextConfig: NextConfig = {
         hostname: 'trae-api-us.mchost.guru',
         pathname: '/api/ide/v1/text_to_image/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'okgpeoznhzbgwnrrdenl.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
 };

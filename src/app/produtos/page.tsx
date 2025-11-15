@@ -9,9 +9,10 @@ interface Product {
   id: string;
   name: string;
   description: string;
-  image: string;
+  image?: string;
+  images?: string[];
   category: string;
-  price?: number;
+  // Sem preço no catálogo
   available: boolean;
 }
 
@@ -22,7 +23,6 @@ const mockProducts: Product[] = [
     description: 'Feito com tomates frescos, sem conservantes. Perfeito para massas e carnes.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=artisanal%20tomato%20sauce%20glass%20jar%2C%20fresh%20tomatoes%2C%20basil%20leaves%2C%20wooden%20background%2C%20professional%20food%20photography&image_size=square',
     category: 'Molhos',
-    price: 24.90,
     available: true
   },
   {
@@ -31,7 +31,6 @@ const mockProducts: Product[] = [
     description: 'Pimentas selecionadas com especiarias. Ideal para acompanhar carnes.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=chili%20pepper%20preserves%20glass%20jar%2C%20colorful%20peppers%2C%20rustic%20kitchen%20background%2C%20professional%20food%20photography&image_size=square',
     category: 'Conservas',
-    price: 32.90,
     available: true
   },
   {
@@ -40,7 +39,6 @@ const mockProducts: Product[] = [
     description: 'Mistura especial de ervas e especiarias. Realça o sabor de qualquer prato.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=seasoning%20blend%20glass%20jar%2C%20mixed%20herbs%20and%20spices%2C%20wooden%20spoon%2C%20rustic%20background%2C%20professional%20food%20photography&image_size=square',
     category: 'Temperos',
-    price: 18.90,
     available: true
   },
   {
@@ -49,7 +47,6 @@ const mockProducts: Product[] = [
     description: 'Primeira prensagem a frio, sabor intenso. Perfeito para saladas.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=extra%20virgin%20olive%20oil%20glass%20bottle%2C%20green%20olives%2C%20wooden%20background%2C%20professional%20food%20photography%2C%20golden%20lighting&image_size=square',
     category: 'Azeites',
-    price: 45.90,
     available: true
   },
   {
@@ -58,7 +55,6 @@ const mockProducts: Product[] = [
     description: 'Preparado com alhos frescos. Excelente para churrascos e grelhados.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=garlic%20sauce%20glass%20jar%2C%20fresh%20garlic%2C%20herbs%2C%20wooden%20background%2C%20professional%20food%20photography&image_size=square',
     category: 'Molhos',
-    price: 28.90,
     available: true
   },
   {
@@ -67,7 +63,6 @@ const mockProducts: Product[] = [
     description: 'Envelhecido em barris de carvalho. Ideal para saladas e reduções.',
     image: 'https://trae-api-us.mchost.guru/api/ide/v1/text_to_image?prompt=balsamic%20vinegar%20glass%20bottle%2C%20grapes%2C%20wooden%20background%2C%20professional%20food%20photography%2C%20elegant%20lighting&image_size=square',
     category: 'Vinagres',
-    price: 38.90,
     available: true
   }
 ];
@@ -137,7 +132,6 @@ export default function ProdutosPage() {
               <Link href="/produtos" className="text-green-600 font-medium">Produtos</Link>
               <Link href="/historia" className="text-gray-700 hover:text-green-600 font-medium">Nossa História</Link>
               <Link href="/sustentabilidade" className="text-gray-700 hover:text-green-600 font-medium">Sustentabilidade</Link>
-              <Link href="/carreiras" className="text-gray-700 hover:text-green-600 font-medium">Carreiras</Link>
             </div>
           </div>
         </div>
@@ -229,12 +223,12 @@ export default function ProdutosPage() {
             {filteredProducts.map((product) => (
               <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                 <div className="relative h-64">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
+                <Image
+                  src={product.images?.[0] || product.image || ''}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
                   <div className="absolute top-4 left-4">
                     <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                       {product.category}
@@ -256,11 +250,7 @@ export default function ProdutosPage() {
                   <p className="text-gray-600 mb-4 leading-relaxed">
                     {product.description}
                   </p>
-                  {product.price && (
-                    <p className="text-2xl font-bold text-green-600 mb-4">
-                      R$ {product.price.toFixed(2)}
-                    </p>
-                  )}
+                  {/* Catálogo sem preço */}
                   <Link
                     href={`/produtos/${product.id}`}
                     className={`inline-block px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${

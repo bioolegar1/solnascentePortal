@@ -12,7 +12,6 @@ const Navigation = () => {
     { href: '/produtos', label: 'Produtos' },
     { href: '/historia', label: 'Nossa História' },
     { href: '/sustentabilidade', label: 'Sustentabilidade' },
-    { href: '/carreiras', label: 'Carreiras' },
   ];
 
   return (
