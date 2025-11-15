@@ -47,7 +47,7 @@ export function useAuth() {
           if (profileError) {
             console.error('Error fetching user profile:', profileError);
           }
-          setUser({ id: session.user.id, email: session.user.email ?? null, role: profile?.role || 'user' });
+          setUser({ id: session.user.id, email: session.user.email ?? null, role: (profile as any)?.role || 'user' });
         } else {
           setUser(null);
         }
@@ -71,7 +71,7 @@ export function useAuth() {
         if (profileError) {
           console.error('Error fetching user profile:', profileError);
         }
-        setUser({ id: session.user.id, email: session.user.email ?? null, role: profile?.role || 'user' });
+        setUser({ id: session.user.id, email: session.user.email ?? null, role: (profile as any)?.role || 'user' });
       } else {
         try {
           const sessionRes = await fetch('/api/admin/session');
